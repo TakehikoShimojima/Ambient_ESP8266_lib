@@ -28,6 +28,9 @@ int HDC1000::readId(void) {
     Wire.write(0xfe);
     Wire.endTransmission();
     Wire.requestFrom(HDC1000_ADDRESS, 2);
+    while (Wire.available() < 2) {
+      ;
+    }
     id = Wire.read() << 8;
     id |= Wire.read();
 
@@ -35,7 +38,7 @@ int HDC1000::readId(void) {
 }
 
 float HDC1000::readTemperature(void) {
-    int temp_raw;
+    unsigned int temp_raw;
     
     Wire.beginTransmission(HDC1000_ADDRESS);
     Wire.write(HDC1000_TEMP_REG);
@@ -44,6 +47,9 @@ float HDC1000::readTemperature(void) {
         delay(1);
     }
     Wire.requestFrom(HDC1000_ADDRESS, 2);
+    while (Wire.available() < 2) {
+      ;
+    }
     temp_raw = Wire.read() << 8;
     temp_raw |= Wire.read();
 
@@ -51,7 +57,7 @@ float HDC1000::readTemperature(void) {
 }
 
 float HDC1000::readHumidity(void) {
-    int humid_raw;
+    unsigned int humid_raw;
     
     Wire.beginTransmission(HDC1000_ADDRESS);
     Wire.write(HDC1000_HUMID_REG);
@@ -60,6 +66,9 @@ float HDC1000::readHumidity(void) {
         delay(1);
     }
     Wire.requestFrom(HDC1000_ADDRESS, 2);
+    while (Wire.available() < 2) {
+      ;
+    }
     humid_raw = Wire.read() << 8;
     humid_raw |= Wire.read();
 
