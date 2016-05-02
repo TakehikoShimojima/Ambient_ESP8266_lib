@@ -24,17 +24,19 @@ const char * ambient_keys[] = {"\"d1\":\"", "\"d2\":\"", "\"d3\":\"", "\"d4\":\"
 Ambient::Ambient() {
 }
 
-void
+bool
 Ambient::begin(unsigned int channelId, const char * writeKey, WiFiClient * c, int dev) {
     this->channelId = channelId;
 
     if (sizeof(writeKey) > AMBIENT_WRITEKEY_SIZE) {
         ERR("writeKey length > AMBIENT_WRITEKEY_SIZE");
+        return false;
     }
     strcpy(this->writeKey, writeKey);
 
     if(NULL == c) {
         ERR("Socket Pointer is NULL, open a socket.");
+        return false;
     }
     this->client = c;
     this->dev = dev;
@@ -48,6 +50,7 @@ Ambient::begin(unsigned int channelId, const char * writeKey, WiFiClient * c, in
     for (int i = 0; i < AMBIENT_NUM_PARAMS; i++) {
         this->data[i].set = false;
     }
+        return true;
 }
 
 bool
