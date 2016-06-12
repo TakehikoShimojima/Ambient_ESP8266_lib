@@ -12,6 +12,7 @@
 #define AMBIENT_MAX_RETRY 5
 #define AMBIENT_DATA_SIZE 24
 #define AMBIENT_NUM_PARAMS 11
+#define AMBIENT_TIMEOUT 3000 // milliseconds
 
 class Ambient
 {
@@ -23,7 +24,9 @@ public:
     bool set(int field, char * data);
     bool clear(int field);
 
-    bool send();
+    bool send(void);
+    int bulk_send(char * buf);
+    bool delete_data(const char * userKey);
 
 private:
 

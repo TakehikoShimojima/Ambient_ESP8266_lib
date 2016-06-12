@@ -1,10 +1,10 @@
 /*
- * ambient.h - Library for sending data to Ambient
+ * ambient.cpp - Library for sending data to Ambient
  * Created by Takehiko Shimojima, April 21, 2016
  */
 #include "Ambient.h"
 
-//#define _DEBUG 1
+#define AMBIENT_DEBUG 0
 
 #if AMBIENT_DEBUG
 #define DBG(...) { Serial.print(__VA_ARGS__); }
@@ -16,7 +16,7 @@
 
 const char* AMBIENT_HOST = "54.65.206.59";
 int AMBIENT_PORT = 80;
-const char* AMBIENT_HOST_DEV = "192.168.0.8";
+const char* AMBIENT_HOST_DEV = "192.168.0.6";
 int AMBIENT_PORT_DEV = 4567;
 
 const char * ambient_keys[] = {"\"d1\":\"", "\"d2\":\"", "\"d3\":\"", "\"d4\":\"", "\"d5\":\"", "\"d6\":\"", "\"d7\":\"", "\"d8\":\"", "\"lat\":\"", "\"lng\":\"", "\"created\":\""};
@@ -95,14 +95,11 @@ Ambient::send() {
         return false;
     }
 
-    char str[360] = {0};
-    char header[54] = {0};
-    char host[32] = {0};
-    char contentLen[28] = {0};
-    const char *contentType = "Content-Type: application/json\r\n\r\n";
-    char body[192] = {0};
+    char str[180];
+    char body[192];
     char inChar;
 
+    memset(body, 0, sizeof(body));
     strcat(body, "{\"writeKey\":\"");
     strcat(body, this->writeKey);
     strcat(body, "\",");
@@ -115,37 +112,155 @@ Ambient::send() {
         }
     }
     body[strlen(body) - 1] = '\0';
-
     strcat(body, "}\r\n");
 
-    sprintf(header, "POST /api/v2/channels/%d/data HTTP/1.1\r\n", this->channelId);
-    if (this->port == 80) {
-        sprintf(host, "Host: %s\r\n", this->host);
-    } else {
-        sprintf(host, "Host: %s:%d\r\n", this->host, this->port);
-    }
-    sprintf(contentLen, "Content-Length: %d\r\n", strlen(body));
-    sprintf(str, "%s%s%s%s%s", header, host, contentLen, contentType, body);
+    memset(str, 0, sizeof(str));
+    sprintf(str, "POST /api/v2/channels/%d/data HTTP/1.1\r\n", this->channelId);
+    sprintf(&str[strlen(str)], "Host: %s:%d\r\n", this->host, this->port);
+    sprintf(&str[strlen(str)], "Content-Length: %d\r\n", strlen(body));
+    sprintf(&str[strlen(str)], "Content-Type: application/json\r\n\r\n");
 
-    DBG("sending: ");
-    DBG(strlen(str));
-    DBG(" bytes\n");
-    DBG(str);
+    DBG("sending: ");DBG(strlen(str));DBG("bytes\r\n");DBG(str);
 
     int ret;
     ret = this->client->print(str);
     delay(30);
-    DBG(ret);
-    DBG(" bytes sent\n\n");
+    DBG(ret);DBG(" bytes sent\n\n");
+    if (ret == 0) {
+        ERR("send failed\n");
+        return false;
+    }
+    ret = this->client->print(body);
+    delay(30);
+    DBG(ret);DBG(" bytes sent\n\n");
     if (ret == 0) {
         ERR("send failed\n");
         return false;
     }
 
     while (this->client->available()) {
-      inChar = this->client->read();
+        inChar = this->client->read();
 #if AMBIENT_DEBUG
-      Serial.write(inChar);
+        Serial.write(inChar);
+#endif
+    }
+
+    this->client->stop();
+
+    for (int i = 0; i < AMBIENT_NUM_PARAMS; i++) {
+        this->data[i].set = false;
+    }
+
+    return true;
+}
+
+int
+Ambient::bulk_send(char *buf) {
+
+    int retry;
+    for (retry = 0; retry < AMBIENT_MAX_RETRY; retry++) {
+        int ret;
+        ret = this->client->connect(this->host, this->port);
+        if (ret) {
+            break ;
+        }
+    }
+    if(retry == AMBIENT_MAX_RETRY) {
+        ERR("Could not connect socket to host\r\n");
+        return -1;
+    }
+
+    char str[180];
+    char inChar;
+
+    memset(str, 0, sizeof(str));
+    sprintf(str, "POST /api/v2/channels/%d/dataarray HTTP/1.1\r\n", this->channelId);
+    sprintf(&str[strlen(str)], "Host: %s:%d\r\n", this->host, this->port);
+    sprintf(&str[strlen(str)], "Content-Length: %d\r\n", strlen(buf));
+    sprintf(&str[strlen(str)], "Content-Type: application/json\r\n\r\n");
+
+    DBG("sending: ");DBG(strlen(str));DBG("bytes\r\n");DBG(str);
+
+    int ret;
+    ret = this->client->print(str); // send header
+    delay(30);
+    DBG(ret);DBG(" bytes sent\n\n");
+    if (ret == 0) {
+        ERR("send failed\n");
+        return -1;
+    }
+
+    int sent = 0;
+    unsigned long starttime = millis();
+    while ((millis() - starttime) < AMBIENT_TIMEOUT) {
+        ret = this->client->print(&buf[sent]);
+        delay(30);
+        DBG(ret);DBG(" bytes sent\n\n");
+        if (ret == 0) {
+            ERR("send failed\n");
+            return -1;
+        }
+        sent += ret;
+        if (sent >= strlen(buf)) {
+            break;
+        }
+    }
+    delay(500);
+
+    while (this->client->available()) {
+        inChar = this->client->read();
+#if AMBIENT_DEBUG
+        Serial.write(inChar);
+#endif
+    }
+
+    this->client->stop();
+
+    for (int i = 0; i < AMBIENT_NUM_PARAMS; i++) {
+        this->data[i].set = false;
+    }
+
+    return (sent == 0) ? -1 : sent;
+}
+
+bool
+Ambient::delete_data(const char * userKey) {
+    int retry;
+    for (retry = 0; retry < AMBIENT_MAX_RETRY; retry++) {
+        int ret;
+        ret = this->client->connect(this->host, this->port);
+        if (ret) {
+            break ;
+        }
+    }
+    if(retry == AMBIENT_MAX_RETRY) {
+        ERR("Could not connect socket to host\r\n");
+        return false;
+    }
+
+    char str[180];
+    char inChar;
+
+    memset(str, 0, sizeof(str));
+    sprintf(str, "DELETE /api/v2/channels/%d/data?userKey=%s HTTP/1.1\r\n", this->channelId, userKey);
+    sprintf(&str[strlen(str)], "Host: %s:%d\r\n", this->host, this->port);
+    sprintf(&str[strlen(str)], "Content-Length: 0\r\n");
+    sprintf(&str[strlen(str)], "Content-Type: application/json\r\n\r\n");
+    DBG(str);
+
+    int ret;
+    ret = this->client->print(str);
+    delay(30);
+    DBG(ret);DBG(" bytes sent\r\n");
+    if (ret == 0) {
+        ERR("send failed\r\n");
+        return false;
+    }
+
+    while (this->client->available()) {
+        inChar = this->client->read();
+#if AMBIENT_DEBUG
+        Serial.write(inChar);
 #endif
     }
 
