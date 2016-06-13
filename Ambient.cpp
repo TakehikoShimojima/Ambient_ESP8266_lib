@@ -116,7 +116,11 @@ Ambient::send() {
 
     memset(str, 0, sizeof(str));
     sprintf(str, "POST /api/v2/channels/%d/data HTTP/1.1\r\n", this->channelId);
-    sprintf(&str[strlen(str)], "Host: %s:%d\r\n", this->host, this->port);
+    if (this->port == 80) {
+        sprintf(&str[strlen(str)], "Host: %s\r\n", this->host);
+    } else {
+        sprintf(&str[strlen(str)], "Host: %s:%d\r\n", this->host, this->port);
+    }
     sprintf(&str[strlen(str)], "Content-Length: %d\r\n", strlen(body));
     sprintf(&str[strlen(str)], "Content-Type: application/json\r\n\r\n");
 
@@ -175,7 +179,11 @@ Ambient::bulk_send(char *buf) {
 
     memset(str, 0, sizeof(str));
     sprintf(str, "POST /api/v2/channels/%d/dataarray HTTP/1.1\r\n", this->channelId);
-    sprintf(&str[strlen(str)], "Host: %s:%d\r\n", this->host, this->port);
+    if (this->port == 80) {
+        sprintf(&str[strlen(str)], "Host: %s\r\n", this->host);
+    } else {
+        sprintf(&str[strlen(str)], "Host: %s:%d\r\n", this->host, this->port);
+    }
     sprintf(&str[strlen(str)], "Content-Length: %d\r\n", strlen(buf));
     sprintf(&str[strlen(str)], "Content-Type: application/json\r\n\r\n");
 
@@ -243,7 +251,11 @@ Ambient::delete_data(const char * userKey) {
 
     memset(str, 0, sizeof(str));
     sprintf(str, "DELETE /api/v2/channels/%d/data?userKey=%s HTTP/1.1\r\n", this->channelId, userKey);
-    sprintf(&str[strlen(str)], "Host: %s:%d\r\n", this->host, this->port);
+    if (this->port == 80) {
+        sprintf(&str[strlen(str)], "Host: %s\r\n", this->host);
+    } else {
+        sprintf(&str[strlen(str)], "Host: %s:%d\r\n", this->host, this->port);
+    }
     sprintf(&str[strlen(str)], "Content-Length: 0\r\n");
     sprintf(&str[strlen(str)], "Content-Type: application/json\r\n\r\n");
     DBG(str);
