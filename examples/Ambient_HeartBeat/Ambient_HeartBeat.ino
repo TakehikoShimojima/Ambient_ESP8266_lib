@@ -1,6 +1,12 @@
+/*
+ * 心拍センサーを10ビットADコンバーターmcp3002につなぎ、
+ * 5秒ごとに、5m秒周期で600回、3秒分サンプリングし、Ambientに送る
+ */
 #include <ESP8266WiFi.h>
 #include <Wire.h>
 #include <Ticker.h>
+#include <SPI.h>
+#include "MCP3002.h"
 #include "Ambient.h"
 
 extern "C" {
@@ -18,32 +24,54 @@ extern "C" {
 
 #define LED 4
 
-#define PERIOD 5
+#define PERIOD 5000 // milliceconds
 
-const char* ssid = "・・・ssid・・・";
-const char* password = "・・・パスワード・・・";
+MCP3002 mcp3002;
+
+const char* ssid = "ssid";
+const char* password = "password";
 WiFiClient client;
+
+unsigned int channelId = 100;
+const char* writeKey = "...writeKey...";
+const char* userKey = "...userKey...";
+Ambient ambient;
 
 #define SAMPLING 5  //  Sampling period in milliseconds
 #define NSAMPLES 600  //  Number of Samples
 #define BUFSIZE  17000
 
-unsigned int channelId = 100;
-const char* writeKey = "ライトキー";
-Ambient ambient;
+bool found;
+unsigned int thresh = 512;
+unsigned int P = 512;
 
 Ticker t2;
-volatile int done = false;
-unsigned int signal[NSAMPLES];
-int sampleIndex = 0;
+volatile int done;
+unsigned int signal[NSAMPLES+50];
+int sampleIndex;
 char buffer[BUFSIZE];
 
 void sampling() {
-    DBGLED(LED, HIGH);
-    signal[sampleIndex++] = system_adc_read();
-    if (sampleIndex >= NSAMPLES) {
-        done = true;
-        DBGLED(LED, LOW);
+    unsigned int Signal = mcp3002.readData(0);
+
+    if (!found) {
+        if (Signal > thresh && Signal > P) { // thresh(ほぼ振幅の1/2)以上の最大値を見つける => P
+            P = Signal;
+        }
+        if (P > thresh && Signal < thresh) { // Pが見つかって、信号がthresh未満になったら
+            found = true;                    // 測定開始
+            DBGLED(LED, HIGH);
+        }
+    }
+    if (!found) {
+        return;
+    }
+    if (!done) {
+        signal[sampleIndex++] = Signal;
+        if (sampleIndex >= (NSAMPLES + 50)) {
+            done = true;
+            DBGLED(LED, LOW);
+        }
     }
 }
 
@@ -60,31 +88,47 @@ void setup()
 
     WiFi.begin(ssid, password);
 
-    int i = 0;
+    DBGLED(LED, HIGH);
     while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-
-        DBGLED(LED, i++ % 2);
-        DBG(".");
+        delay(0);
     }
-
     DBGLED(LED, LOW);
+
     DBG("WiFi connected\r\nIP address: ");
     DBG(WiFi.localIP());
     DBG("\r\n");
 
     ambient.begin(channelId, writeKey, &client);
 
-    DBG("sampling start...");
+    mcp3002.begin();
+}
+
+void loop()
+{
+    unsigned long stime = millis(); // 開始時刻を記録
+    found = false;
+    done = false;
+    sampleIndex = 0;
+
     t2.attach_ms(SAMPLING, sampling);
     while (!done) {
         delay(0);
     }
     t2.detach();
-    DBG("done\r\n");
+
+    ambient.delete_data(userKey);
+
+    unsigned int T = 512;
+    int start = 0;
+    for (int i = 0; i < 50; i++) { // 測定開始から50サンプル以内の最小値 => T
+        if (signal[i] < T) {
+            T = signal[i];
+            start = i;              // 最小値のインデックス => start
+        }
+    }
 
     sprintf(buffer, "{\"writeKey\":\"%s\",\"data\":[", writeKey);
-    for (int i = 0; i < NSAMPLES; i++) {
+    for (int i = start; i < start + NSAMPLES; i++) {
         sprintf(&buffer[strlen(buffer)], "{\"created\":%d,\"d%d\":%d},", SAMPLING * i, 1, signal[i]);
     }
     buffer[strlen(buffer)-1] = '\0';
@@ -94,10 +138,10 @@ void setup()
     
     int sent = ambient.bulk_send(buffer);
     DBG("sent: ");DBG(sent);DBG("\r\n");
-}
 
-void loop()
-{
-    delay(0);
+    unsigned long elapse = millis() - stime; // 経過時間を計算
+    if (elapse < PERIOD) {
+        delay(PERIOD - elapse);
+    }
 }
 
