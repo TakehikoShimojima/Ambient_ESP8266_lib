@@ -141,7 +141,7 @@ void setup()
 
         sent += datapersend;
 
-        delay(4000);
+        delay(5000);
     }
 }
 
