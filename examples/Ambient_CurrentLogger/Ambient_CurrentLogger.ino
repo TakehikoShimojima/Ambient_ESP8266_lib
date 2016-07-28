@@ -67,14 +67,6 @@ void sampling() {
     }
 }
 
-void ftoa(float val, char *buf) {
-    itoa((int)val, buf, 10);
-    int i = strlen(buf);
-    buf[i++] = '.';
-    val = (int)(val * 10) % 10;
-    itoa(val, &buf[i], 10);
-}
-
 #define min(a,b) (((a) < (b)) ? (a) : (b))
 
 void setup()
@@ -125,9 +117,15 @@ void setup()
 
         for (int i = 0; i < datapersend; i++) {
             char fampbuf[8], fvoltbuf[8];
-    
-            ftoa((float)(ampbuf[sent + i]) * 0.1, fampbuf);
-            ftoa((float)(voltbuf[sent + i]) * 1.25, fvoltbuf);
+
+            float a, v;
+            a = (float)(ampbuf[sent + i]);
+            a = (a < 0) ? 0 : a;
+            dtostrf(a * 0.1, 3, 1, fampbuf);
+
+            v = (float)(voltbuf[sent + i]);
+            v = (v < 0) ? 0 : v;
+            dtostrf(v * 1.25, 3, 1, fvoltbuf);
             
             sprintf(&buffer[strlen(buffer)], "{\"created\":%d,\"d1\":%s,\"d2\":%s},", SAMPLING * (sent + i), fampbuf, fvoltbuf);
         }

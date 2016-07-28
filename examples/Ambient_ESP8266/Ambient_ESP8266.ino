@@ -34,14 +34,6 @@ Ambient ambient;
 
 HDC1000 hdc1000;
 
-void ftoa(float val, char *buf) {
-    itoa((int)val, buf, 10);
-    int i = strlen(buf);
-    buf[i++] = '.';
-    val = (int)(val * 10) % 10;
-    itoa(val, &buf[i], 10);
-}
-
 void setup()
 {
     wifi_set_sleep_type(LIGHT_SLEEP_T);
@@ -91,9 +83,9 @@ void loop()
     DBG(humid);
     DBG(" %\r\n");
 
-    ftoa(temp, tempbuf);
+    dtostrf(temp, 3, 1, tempbuf);
     ambient.set(1, tempbuf);
-    ftoa(humid, humidbuf);
+    dtostrf(humid, 3, 1, humidbuf);
     ambient.set(2, humidbuf);
 
     DBGLED(LED, HIGH);
