@@ -1,6 +1,6 @@
 # Ambient_ESP8266_lib
 
-[Ambient](https://ambidata.io)はIoT用のクラウドサービスです。 マイコンから送られたデーターを受信し、蓄積し、可視化(グラフ化)します。
+[Ambient](https://ambidata.io)はIoTクラウドサービスです。 マイコンから送られたデーターを受信し、蓄積し、可視化(グラフ化)します。
 
 ![Ambient structure](https://ambidata.io/wp/wp-content/uploads/2016/09/AmbientStructure.jpg)
 
