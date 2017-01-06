@@ -21,7 +21,9 @@ public:
     Ambient(void);
 
     bool begin(unsigned int channelId, const char * writeKey, WiFiClient * c, int dev = 0);
-    bool set(int field, char * data);
+    bool set(int field,const char * data);
+	bool set(int field, double data);
+	bool set(int field, int data);
     bool clear(int field);
 
     bool send(void);

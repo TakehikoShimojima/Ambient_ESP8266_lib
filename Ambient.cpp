@@ -54,7 +54,7 @@ Ambient::begin(unsigned int channelId, const char * writeKey, WiFiClient * c, in
 }
 
 bool
-Ambient::set(int field, char * data) {
+Ambient::set(int field,const char * data) {
     --field;
     if (field < 0 || field >= AMBIENT_NUM_PARAMS) {
         return false;
@@ -66,6 +66,16 @@ Ambient::set(int field, char * data) {
     strcpy(this->data[field].item, data);
 
     return true;
+}
+
+bool Ambient::set(int field, double data)
+{
+	return set(field,String(data).c_str());
+}
+
+bool Ambient::set(int field, int data)
+{
+	return set(field, String(data).c_str());
 }
 
 bool
