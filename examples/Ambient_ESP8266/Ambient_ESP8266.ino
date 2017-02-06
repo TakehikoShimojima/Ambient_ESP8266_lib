@@ -72,7 +72,7 @@ void setup()
 void loop()
 {
     float temp, humid;
-    char tempbuf[12], humidbuf[12];
+    char humidbuf[12];
 
     temp = hdc1000.readTemperature();
     humid = hdc1000.readHumidity();
@@ -83,10 +83,9 @@ void loop()
     DBG(humid);
     DBG(" %\r\n");
 
-    dtostrf(temp, 3, 1, tempbuf);
-    ambient.set(1, tempbuf);
-    dtostrf(humid, 3, 1, humidbuf);
-    ambient.set(2, humidbuf);
+    ambient.set(1, temp);                // データーがint型かfloat型であれば、直接セットすることができます。
+    dtostrf(humid, 3, 1, humidbuf);      // データーの桁数などを制御したければ自分で文字列形式に変換し、
+    ambient.set(2, humidbuf);            // セットします。
 
     DBGLED(LED, HIGH);
 
