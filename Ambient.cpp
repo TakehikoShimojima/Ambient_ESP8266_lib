@@ -16,7 +16,7 @@
 
 const char* AMBIENT_HOST = "54.65.206.59";
 int AMBIENT_PORT = 80;
-const char* AMBIENT_HOST_DEV = "192.168.0.6";
+const char* AMBIENT_HOST_DEV = "192.168.0.11";
 int AMBIENT_PORT_DEV = 4567;
 
 const char * ambient_keys[] = {"\"d1\":\"", "\"d2\":\"", "\"d3\":\"", "\"d4\":\"", "\"d5\":\"", "\"d6\":\"", "\"d7\":\"", "\"d8\":\"", "\"lat\":\"", "\"lng\":\"", "\"created\":\""};
